@@ -1,1 +1,2 @@
-# stratifreg-code-
+# computer code for communication stratifreg 
+
