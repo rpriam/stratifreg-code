@@ -10,3 +10,4 @@ a mse or mae for both the continuous and discretized outcomes. Graphically, it i
 to visualize the change between intervals of outcomes. With a threshold equal to the median, the approach is illustrated for several real datasets in the presented experiments. It is
 applied with a medical dataset from the Covid-19 lockdown in spring 2020.
 
+Warning: this seems to retrieve some idea of the "spurious correlation" from Professor Karl Pearson, but with a different proof and problem because this seems never considered in practice.
