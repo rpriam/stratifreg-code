@@ -1,5 +1,5 @@
 # <br>
-computer code for communication "Family of linear regression mixture models stratified along the outcome" <br>
+Computer code for "Family of linear regression mixture models stratified along the outcome" <br>
 
 Notebook: <br>
 
