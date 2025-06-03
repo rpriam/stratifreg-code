@@ -31,27 +31,30 @@ class JointUtils:
     @staticmethod
     def _as_numpy(X, reset_index=True):
         """
-        Convertit un objet pandas (DataFrame ou Series) en numpy.ndarray.
-        - Si reset_index=True, reset_index(drop=True) est appliqué avant .values.
-        - Si X est déjà un ndarray, il est renvoyé tel quel.
-    
-        Paramètres
+        Converts a pandas object (DataFrame or Series) to a numpy.ndarray.
+        
+        Parameters
         ----------
-        X : pandas.DataFrame, pandas.Series ou numpy.ndarray
-        reset_index : bool, optionnel (par défaut True)
-            Si True et X est un DataFrame/Series, effectue X.reset_index(drop=True) avant .values.
-    
-        Retour
-        ------
+        X : pandas.DataFrame, pandas.Series or numpy.ndarray
+            The data to convert.
+        reset_index : bool, optional (default True)
+            If True and X is a DataFrame/Series, applies X.reset_index(drop=True) before .values.
+        
+        Returns
+        -------
         numpy.ndarray
-            Donnée convertie en ndarray : 2D si X était DataFrame, 1D si X était Series.
+            Data converted to ndarray: 2D if X was a DataFrame, 1D if X was a Series.
         """
         X = copy.deepcopy(X)
         if isinstance(X, np.ndarray):
+            if X.ndim == 2 and X.shape[1] == 1:
+                return X[:, 0]
             return X
         elif isinstance(X, pd.DataFrame):
             if reset_index:
                 X = X.reset_index(drop=True)
+            if X.shape[1] == 1:
+                return X.iloc[:, 0].values
             return X.values
         elif isinstance(X, pd.Series):
             if reset_index:
@@ -75,9 +78,10 @@ class JointUtils:
     
         Returns
         -------
-        X_aug : same type as X
-            Matrix X with an intercept column added as the first column.
+        X_aug : Same type as X
+            With intercept column (constant 1) added as the first column.
         """
+        X = copy.deepcopy(X)
         if isinstance(X, pd.DataFrame) or isinstance(X, pd.Series):
             X.insert(0, "const", 1.0)
             return X
@@ -85,7 +89,7 @@ class JointUtils:
             return np.hstack([np.ones((X.shape[0], 1)), X])
     
     @staticmethod
-    def solve_with_fallbacks(objective, constraints=None, verbose=False, max_iters=1000, tol=1e-5):
+    def solve_with_fallbacks(objective, constraints=None, verbose=False, max_iters=5000, tol=1e-5):
         """
         Solves a convex optimization problem using CVXPY, testing multiple solvers until one succeeds.
     
@@ -114,7 +118,6 @@ class JointUtils:
         """
         constraints = constraints if constraints is not None else []
         problem = cp.Problem(cp.Minimize(objective), constraints)
-        #solvers = ['ECOS', 'OSQP', 'SCS', 'CVXOPT']
         solvers = ['OSQP', 'SCS', 'CVXOPT']
         last_exception = None
     
@@ -142,7 +145,6 @@ class JointUtils:
                     print(f"Failed with {solver} : {type(e).__name__} - {e}")
     
         raise RuntimeError(f"No solver succeeded. Last error : {last_exception}")
-    #FIN solve_with_fallbacks
 
     @staticmethod
     def split_by_median(X, y, group_mode='median'):
@@ -175,21 +177,20 @@ class JointUtils:
             median = np.median(y_np)
             mask1 = y_np <= median
             mask2 = y_np > median
-            X1 = X[mask1]
-            X2 = X[mask2]
+            X1 = X_np[mask1]
+            X2 = X_np[mask2]
             y1 = y_np[mask1]
             y2 = y_np[mask2]
         else:
-            n = len(X) // 2
-            X1 = X.iloc[:n]
-            X2 = X.iloc[n:]
-            y1 = y_np.iloc[:n]
-            y2 = y_np.iloc[n:]
+            n = len(X_np) // 2
+            X1 = X_np[:n,]
+            X2 = X_np[n:]
+            y1 = y_np[:n]
+            y2 = y_np[n:]
         return X1, X2, y1, y2
-    #FIN prepare_groups
-
+    
     @staticmethod
-    def find_x0_LplusL(X, y, y_cut=None, L=5):
+    def find_x0_LL(X, y, y_cut=None, L=5):
         """
         Selects the median point among the 2*L observations closest to y_cut.
     
@@ -240,14 +241,9 @@ class JointUtils:
         -------
         x0 : ndarray
             Closest observation in X.
-        i0 : int
-            Index of x0.
-        y_val : float
-            Value of y at index i0.
         """
         X_np = JointUtils._as_numpy(X)
         y_np = JointUtils._as_numpy(y)
         if y0 is None: y0 = np.median(y_np)
         i0 = np.argmin(np.abs(y_np - y0))
-        return X_np[i0], i0, y_np[i0]
-    
+        return X_np[i0]

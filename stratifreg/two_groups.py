@@ -28,6 +28,7 @@ class Joint2Regressor:
         """
         pass
 
+
     def fit_ols_groups(self, X1, X2, y1, y2, sigma_mode='one'):
         """
         Fits separate OLS regressions on two groups and estimates coefficients and variances.
@@ -75,7 +76,7 @@ class Joint2Regressor:
             sigma2_1 = np.mean(resid1 ** 2)
             sigma2_2 = np.mean(resid2 ** 2)
             sigma2s = [sigma2_1, sigma2_2]
-        var_beta = self.variance_constrained(Xb, sigma2s[0], C=None)  # C=None = OLS
+        var_beta = self.variance_constrained(Xb, np.mean(sigma2s), C=None)  # C=None = OLS
         beta1 = beta[:X1.shape[1]]
         beta2 = beta[X1.shape[1]:]
         self.X1_ = X1
@@ -85,7 +86,6 @@ class Joint2Regressor:
         self.sigma_mode_ = sigma_mode
         self.variables_ = {'beta1':beta1, 'beta2':beta2,'var_beta':var_beta, 'sigma2s':sigma2s}
         return [beta1, beta2], var_beta, sigma2s
-    #FIN reg_group
 
     def fit_ols_jointure(self, X1, X2, y1, y2, C, d=None, sigma_mode='one'):
         """
@@ -156,7 +156,6 @@ class Joint2Regressor:
         beta2_c = beta_c[p:]
         self.variables_ = {'beta1':beta1_c, 'beta2':beta2_c, 'sigma2s':sigma2s}
         return [beta1_c, beta2_c], var_beta_c, sigma2s, C, d
-    #FIN reg_group_ctr_general
     
     def fit_ols_jointure_a_b(self, X1, X2, y1, y2, x0, y0=None, sigma_mode='one', cas='a'):
         """
@@ -204,8 +203,78 @@ class Joint2Regressor:
         else:
             raise ValueError("'a' or 'b'")
         return self.fit_ols_jointure(X1, X2, y1, y2, C, d, sigma_mode)
-    #FIN reg_group_ctr_a_b
 
+    def fit_ols_jointure_smoothed(self, X1, X2, y1, y2, x0, lc=10.0, sigma_mode='one'):
+        """
+        Fits two OLS regressions with a *soft* continuity penalty at the join point x0.
+        Minimizes:
+            ||y1 - X1*beta1||^2 + ||y2 - X2*beta2||^2 + lc * (x0.T*beta1 - x0.T*beta2)^2
+    
+        Parameters
+        ----------
+        X1, X2 : ndarray or DataFrame
+            Design matrices for groups 1 and 2.
+        y1, y2 : ndarray or Series
+            Targets for groups 1 and 2.
+        x0 : ndarray
+            Join point feature vector.
+        lambda_cont : float
+            Penalty strength for continuity (default 10.0).
+        sigma_mode : 'one' or 'two'
+            For consistency with your interface (currently only 'one' supported here).
+    
+        Returns
+        -------
+        [beta1, beta2] : list of ndarray
+            Fitted coefficients for each group.
+        var_beta : ndarray
+            Estimated variance-covariance matrix for [beta1, beta2].
+        sigma2s : list
+            Residual variances per group.
+        """
+        X1 = JointUtils._as_numpy(X1)
+        X2 = JointUtils._as_numpy(X2)
+        y1 = JointUtils._as_numpy(y1).ravel()
+        y2 = JointUtils._as_numpy(y2).ravel()
+        p = X1.shape[1]
+        n1, n2 = X1.shape[0], X2.shape[0]
+    
+        # Build the block design matrix and target
+        Xb = np.block([
+            [X1, np.zeros((n1, p))],
+            [np.zeros((n2, p)), X2],
+            [np.sqrt(lc) * x0, -np.sqrt(lc) * x0]
+        ])
+        yb = np.concatenate([y1, y2, [0]])
+    
+        # Fit by least squares
+        beta = np.linalg.lstsq(Xb, yb, rcond=None)[0]
+        beta1 = beta[:p]
+        beta2 = beta[p:]
+        # Calculate residuals and variance
+        yhat1 = X1 @ beta1
+        yhat2 = X2 @ beta2
+        resid1 = y1 - yhat1
+        resid2 = y2 - yhat2
+        sigma2_1 = np.mean(resid1 ** 2)
+        sigma2_2 = np.mean(resid2 ** 2)
+        sigma2 = np.mean(np.concatenate([resid1, resid2]) ** 2)
+        sigma2s = [sigma2_1, sigma2_2] if sigma_mode == 'two' else [sigma2, sigma2]
+    
+        # Variance (unconstrained OLS approx)
+        Xb_nopenalty = np.block([
+            [X1, np.zeros((n1, p))],
+            [np.zeros((n2, p)), X2]
+        ])
+        var_beta = sigma2 * np.linalg.inv(Xb_nopenalty.T @ Xb_nopenalty)
+        self.X1_=X1
+        self.y1_=y1
+        self.X2_=X2
+        self.y2_=y2
+        self.lc_=lc
+        self.variables_ = {'beta1':beta1, 'beta2':beta2, 'sigma2s':sigma2s}
+        return [beta1, beta2], var_beta, sigma2s
+    
     def solve_ols_constrained(self, Xb, yb, C, d=None):
         """
         Solves a constrained OLS regression problem using KKT conditions.
@@ -238,7 +307,6 @@ class Joint2Regressor:
         rhs = np.concatenate([Xty, d])
         sol = np.linalg.solve(KKT, rhs)
         return sol[:-C.shape[0]]
-    #FIN constrained_beta
 
     def solve_ols_constrained_het(self, Xb, yb, C, Sigma, d=None):
         """
@@ -275,7 +343,6 @@ class Joint2Regressor:
         ])
         rhs = np.concatenate([XtSinvy, d])
         return np.linalg.solve(KKT, rhs)[:-C.shape[0]]
-    #FIN constrained_beta_het
 
     def assemble_block_matrix(self, X1, X2):
         """
@@ -298,7 +365,6 @@ class Joint2Regressor:
         n2, _ = X2.shape
         return np.block([[X1, np.zeros((n1, p))],
                         [np.zeros((n2, p)), X2]])
-    #FIN block_stack
 
     def build_constraint_vector(self, x0, p):
         """
@@ -319,7 +385,6 @@ class Joint2Regressor:
 
         v = np.kron([1, -1], x0)
         return v.reshape(1, -1)
-    #FIN constraint_a
 
     def build_constraint_matrix(self, x0, p):
         """
@@ -341,11 +406,11 @@ class Joint2Regressor:
         c1 = np.hstack([x0, np.zeros_like(x0)])
         c2 = np.hstack([np.zeros_like(x0), x0])
         return np.vstack([c1, c2])
-    #FIN constraint_b
 
-    def variance_constrained(self, Xb, sigma2, C=None):
+    def variance_constrained(self, Xb, sigma2, C=None): #(approximation (one sigma, C not f(X,y)))
         """
-        Computes the variance-covariance matrix of OLS (or constrained OLS) coefficient estimates.
+        Computes the approximate variance-covariance matrix 
+        From unconstrained OLS estimates in two groups.
     
         Parameters
         ----------
@@ -368,11 +433,11 @@ class Joint2Regressor:
         CVCt = C @ VCt
         CVCt_inv = inv(CVCt)
         return V - VCt @ CVCt_inv @ VCt.T
-    #FIN variance_constrained
-
-    def variance_constrained_het(self, X1c, X2c, sigma2_1, sigma2_2, C):
+    
+    def variance_constrained_het(self, X1, X2, sigma2_1, sigma2_2, C): #(approximation (one sigma, C not f(X,y)))
         """
-        Computes the variance-covariance matrix of constrained OLS estimates with group-specific variances.
+        Computes the approximate variance-covariance matrix 
+        From constrained OLS estimates in two groups.
     
         Parameters
         ----------
@@ -392,11 +457,11 @@ class Joint2Regressor:
         var_beta : ndarray
             Constrained variance-covariance matrix of the estimated coefficients.
         """
-        n1, p = X1c.shape
-        n2 = X2c.shape[0]
+        n1, p = X1.shape
+        n2 = X2.shape[0]
         Xb = np.block([
-            [X1c, np.zeros((n1, p))],
-            [np.zeros((n2, p)), X2c]
+            [X1, np.zeros((n1, p))],
+            [np.zeros((n2, p)), X2]
         ])
         W_diag = np.concatenate([
             np.full(n1, 1 / sigma2_1),
@@ -408,8 +473,7 @@ class Joint2Regressor:
         middle = CV @ C.T
         Vc = V - CV.T @ inv(middle) @ CV
         return Vc
-    #FIN variance_constrained_from_sigmas
-
+    
     def check_jointure_constraint(self, betas_,joint_X_list, name_model=None,tolerance = 1e-5):
         """
         Checks whether the continuity constraint is satisfied at each join point between consecutive groups.
@@ -435,7 +499,6 @@ class Joint2Regressor:
             right = np.dot(xij, betas_[i+1])
             print(f"Joint {i+1}: left={left:.6f}, right={right:.6f}, diff={abs(left-right):.2e}", end=" ")
             print(f" (constraint {'OK' if abs(left - right) < tolerance else 'Failed'})"," (",name_model,")")
-    #FIN check_constraints
 
     def compare_models(self, betas_dict, x0, tolerance=1e-5):
         """
@@ -474,12 +537,10 @@ class Joint2Regressor:
                           f"{'identical !' if diff < tolerance else 'different !'}")
         for name in model_names:
             self.check_jointure_constraint(betas_dict[name], [x0], name, tolerance)    
-    #FIN compare_models_dict
 
     def predict(self, X_new, group=1):
         """
         Predicts target values for new observations using the fitted group models.
-    
         For each group, returns the prediction for X_new using the corresponding estimated coefficients.
     
         Parameters
@@ -500,3 +561,42 @@ class Joint2Regressor:
         if group==1: return y_pred1
         if group==2: return y_pred2
         return y_pred1, y_pred2
+
+    @staticmethod
+    def display(model, X_columns, model_name="model"):
+        """
+        Summarize beta1 and beta2 (or 'betas') from a Joint2Regressor model.
+        Displays variable names as rows and group indices as columns
+        Works for both constrained and unconstrained fits.
+    
+        Parameters:
+        - model : fitted Joint2Regressor instance
+        - X_columns : list of variable names (excluding intercept)
+        - model_name : prefix for output columns
+    
+        Returns:
+        - DataFrame with coefficients for group 1 and group 2
+        """
+        import pandas as pd
+        import numpy as np
+    
+        vars_ = getattr(model, "variables_", {})
+        beta1 = vars_.get("beta1", None)
+        beta2 = vars_.get("beta2", None)
+    
+        if (beta1 is None or beta2 is None) and "betas" in vars_:
+            betas = vars_["betas"]
+            if isinstance(betas, list) and len(betas) == 2:
+                beta1, beta2 = betas[0], betas[1]
+    
+        if beta1 is None or beta2 is None:
+            print("Error: beta1 and beta2 not found in model.")
+            return pd.DataFrame()
+    
+        varnames = ['intercept'] + list(X_columns)
+        df = pd.DataFrame({
+            f"{model_name}_G1": np.round(beta1, 4),
+            f"{model_name}_G2": np.round(beta2, 4)
+        }, index=varnames)
+    
+        return df

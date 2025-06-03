@@ -2,7 +2,7 @@
 k_groups.py
 ===========
 
-Module for piecewise regression with K groups (strata). Supports quadratic, quantile, and ElasticNet loss.
+Stratified piecewise regression with K groups (strata). Supports quadratic, quantile, and ElasticNet loss.
 Handles joint/continuity constraints at multiple cut points.
 
 Main class:
@@ -11,12 +11,13 @@ Main class:
 License: MIT
 """
 
+from stratifreg.utils import JointUtils
 from numpy.linalg import inv
+from numpy.linalg import lstsq
 import pandas as pd
 import numpy as np
 import cvxpy as cp
 import warnings
-from stratifreg.utils import JointUtils
 
 class JointKRegressor:
     def __init__(self):
@@ -28,15 +29,8 @@ class JointKRegressor:
         """
         pass  
     
-    def fit(self, 
-        groups,             
-        joint_X_list,       
-        loss='quadratic',   
-        tau=0.5,            
-        l1=0.,              # lasso
-        l2=0.,              # Ridge
-        weights_list=None   
-      ):
+    def fit(self, groups, joint_X_list, loss='quadratic',   
+            tau=0.5, l1=0., l2=0., weights_list=None):
         """
         Fits an Elastic Net or quantile regression model per group with optional joint constraints.
     
@@ -99,8 +93,6 @@ class JointKRegressor:
             # Elastic Net 
             objective += l1 * cp.norm1(betas[g]) + l2 * cp.sum_squares(betas[g])
 
-        #prob = cp.Problem(cp.Minimize(objective), constraints)
-        #prob.solve()
         prob = JointUtils.solve_with_fallbacks(objective, constraints, verbose=False)
         betas_value = [b.value for b in betas]
         self.groups_      = groups
@@ -112,8 +104,7 @@ class JointKRegressor:
         self.weights_list_= weights_list
         self.variables_ = {'betas': betas_value}
         return betas_value
-    #FIN fit_piecewise_models
-    
+   
     def check_jointure_constraint(self, betas,joint_X_list, name_model=None,tolerance = 1e-5):
         """
         Checks the continuity of predictions at join points between groups.
@@ -136,7 +127,6 @@ class JointKRegressor:
             right = np.dot(xij, betas[i+1])
             print(f"Joint {i+1}: left={left:.6f}, right={right:.6f}, diff={abs(left-right):.2e}", end=" ")
             print(f" (constraint {'OK' if abs(left - right) < tolerance else 'Failed'})"," (",name_model,")")
-    #FIN check_constraints
 
     def compare_models(self, betas_dict, x0, tolerance=1e-5):
         """
@@ -169,7 +159,6 @@ class JointKRegressor:
                           f"{'identical !' if diff < tolerance else 'different !'}")
         for name in model_names:
             self.check_jointure_constraint(betas_dict[name], [x0], name, tolerance)
-    #FIN compare_models_dict
 
     def predict(self, X_new):
         """
@@ -188,31 +177,36 @@ class JointKRegressor:
             Matrix of predicted values, shape (n_samples, K), where each column k contains the predictions for group k.
         """
 
-        X_arr = X_new.values if hasattr(X_new, "values") else X_new
+        X_new = X_new.values if hasattr(X_new, "values") else X_new
         betas = self.variables_["betas"]
-        return np.column_stack([X_arr @ beta for beta in betas])
+        return np.column_stack([X_new @ beta for beta in betas])
 
-    def assign_group(self, X_new):
+    @staticmethod
+    def display(model, X_columns, model_name="model"):
         """
-        Assigns each observation to the group whose predicted values are closest 
-        on average to the training targets of that group.
+        Summarize group coefficients from a JointKRegressor model.
+        Displays variable names as rows and group indices as columns.
     
-        Parameters
-        ----------
-        X_new : ndarray or DataFrame
-            New data points to assign.
+        Parameters:
+        - model : a fitted JointKRegressor instance
+        - X_columns : list of variable names (excluding intercept)
+        - model_name : optional label prefix for columns
     
-        Returns
-        -------
-        group_idx : ndarray of shape (n_samples,)
-            Index of the most similar group for each observation.
+        Returns:
+        - pandas DataFrame with one column per group
         """
-        y_hat = self.predict(X_new)              # (n_samples, K)
-        n_samples, K = y_hat.shape
-        y_groups = [yg.values if hasattr(yg, "values") else yg
-                    for (_, yg) in self.groups_]
-        distances = np.zeros((n_samples, K))
-        for g in range(K):
-            diff = np.abs(y_hat[:, g][:, None] - y_groups[g][None, :])
-            distances[:, g] = diff.mean(axis=1)
-        return np.argmin(distances, axis=1)
+        vars_ = getattr(model, "variables_", {})
+        betas = vars_.get("betas", None)
+        if not isinstance(betas, list) or not betas:
+            print("Error: 'betas' list not found in model.variables_.")
+            return pd.DataFrame()
+    
+        varnames = ['intercept'] + list(X_columns)
+        data = {}
+    
+        for i, beta in enumerate(betas, start=1):
+            colname = f"{model_name}_G{i}"
+            data[colname] = np.round(beta, 4)
+    
+        df = pd.DataFrame(data, index=varnames)
+        return df
