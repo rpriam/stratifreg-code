@@ -6,7 +6,7 @@ Computer code for "Family of linear regression mixture models stratified along t
 | two_groups.py | Joint2Regressor       | fit_ols_groups, fit_ols_jointure, fit_ols_jointure_a_b, fit_ols_jointure_smoothed, solve_ols_constrained, solve_ols_constrained_het, assemble_block_matrix, build_constraint_vector, build_constraint_matrix, variance_constrained, variance_constrained_het, check_jointure_constraint, compare_models, predict |
 | k_groups.py   | JointKRegressor       | fit, check_jointure_constraint, compare_models, predict         |
 | gmm.py        | Joint2GMMRegressor    | fit, solve_constrained_regression, check_jointure_constraint, predict |
-| utils.py      | JointUtils            | _as_numpy, add_intercept, solve_with_fallbacks, split_by_median, find_x0_LplusL, find_x0 |
+| utils.py      | JointUtils            | _as_numpy, add_intercept, solve_with_fallbacks, split_by_median, find_x0_LL, find_x0 |
 
 Notebook: <br>
 
