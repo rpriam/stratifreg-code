@@ -1,7 +1,7 @@
 # <br>
 Computer code for "Family of linear regression mixture models stratified along the outcome" <br>
 
-# Structure of the library
+# Structure
 
 | File          | Class                 | Method(s) (public)                                             |
 |---------------|-----------------------|----------------------------------------------------------------|
@@ -12,7 +12,7 @@ Computer code for "Family of linear regression mixture models stratified along t
 
 ## Main Fit Methods (see options for lasso, ridge, and quantile when available)
 
-| Class               | Method                    | Description                                           | #Groups  | # Components |
+| Class               | Method                    | Description                                           | #Groups  | # |
 |---------------------|--------------------------|-------------------------------------------------------|-----------|--------------|
 | Joint2Regressor     | fit_ols_groups           | Fits separate OLS models to two groups of data. | 2 | 1+1 |
 | Joint2Regressor     | fit_ols_jointure         | Fits OLS with a continuity constraint at the joint. | 2 | 1+1 |
