@@ -10,16 +10,16 @@ Computer code for "Family of linear regression mixture models stratified along t
 | gmm.py        | Joint2GMMRegressor    | fit, solve_constrained_regression, check_jointure_constraint, predict |
 | utils.py      | JointUtils            | _as_numpy, add_intercept, solve_with_fallbacks, split_by_median, find_x0_LL, find_x0 |
 
-## Main Fit Methods
+## Main Fit Methods (see options for lasso, ridge, and quantile when available)
 
-| Class               | Method                    | Description                                           |
-|---------------------|--------------------------|-------------------------------------------------------|
-| Joint2Regressor     | fit_ols_groups           | Fits separate OLS models to two groups of data.       |
-| Joint2Regressor     | fit_ols_jointure         | Fits OLS with a continuity constraint at the join.    |
-| Joint2Regressor     | fit_ols_jointure_a_b     | Fits OLS enforcing join-point continuity (two cases). |
-| Joint2Regressor     | fit_ols_jointure_smoothed| Fits OLS with a soft (penalized) continuity at join.  |
-| JointKRegressor     | fit                      | Fits piecewise regression across K groups.            |
-| Joint2GMMRegressor  | fit                      | Fits Gaussian Mixture regression for two groups.      |
+| Class               | Method                    | Description                                           | #Groups  | # Components |
+|---------------------|--------------------------|-------------------------------------------------------|-----------|              |
+| Joint2Regressor     | fit_ols_groups           | Fits separate OLS models to two groups of data. | 2 | 1+1 |
+| Joint2Regressor     | fit_ols_jointure         | Fits OLS with a continuity constraint at the joint. | 2 | 1+1 |
+| Joint2Regressor     | fit_ols_jointure_a_b     | Fits OLS enforcing joint-point continuity. | 2 | 1+1 |
+| Joint2Regressor     | fit_ols_jointure_smoothed| Fits OLS with a soft (penalized) continuity at joint. | 2 | 1+1 |
+| JointKRegressor     | fit                      | Fits stratified regression across K groups with continuities. | K | K x 1 |
+| Joint2GMMRegressor  | fit                      | Fits Gaussian Mixture regression for two groups.      | 2  | m1+m2 |
 
 Notebook: <br>
 
