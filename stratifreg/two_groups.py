@@ -2,7 +2,7 @@
 two_groups.py
 =============
 
-Module providing stratified regression for two groups, with or without joint/continuity constraint.
+Stratified regression for two groups, with or without joint/continuity constraint.
 Implements OLS, joint OLS, and utilities for model comparison and diagnostics.
 
 Main class:
@@ -76,7 +76,7 @@ class Joint2Regressor:
             sigma2_1 = np.mean(resid1 ** 2)
             sigma2_2 = np.mean(resid2 ** 2)
             sigma2s = [sigma2_1, sigma2_2]
-        var_beta = self.variance_constrained(Xb, np.mean(sigma2s), C=None)  # C=None = OLS
+        var_beta = self.variance_constrained(Xb, np.mean(sigma2s), C=None)
         beta1 = beta[:X1.shape[1]]
         beta2 = beta[X1.shape[1]:]
         self.X1_ = X1
@@ -146,8 +146,8 @@ class Joint2Regressor:
             residuals = yb - yhat
             resid1 = residuals[:len(y1)]
             resid2 = residuals[len(y1):]
-            sigma2_1 = np.mean(resid1 ** 2) #biais!
-            sigma2_2 = np.mean(resid2 ** 2) #biais!
+            sigma2_1 = np.mean(resid1 ** 2) 
+            sigma2_2 = np.mean(resid2 ** 2) 
             sigma2s = [sigma2_1, sigma2_2]
             var_beta_c = self.variance_constrained_het(
                 X1, X2, sigma2_1, sigma2_2, C)
@@ -238,20 +238,15 @@ class Joint2Regressor:
         y2 = JointUtils._as_numpy(y2).ravel()
         p = X1.shape[1]
         n1, n2 = X1.shape[0], X2.shape[0]
-    
-        # Build the block design matrix and target
         Xb = np.block([
             [X1, np.zeros((n1, p))],
             [np.zeros((n2, p)), X2],
             [np.sqrt(lc) * x0, -np.sqrt(lc) * x0]
         ])
         yb = np.concatenate([y1, y2, [0]])
-    
-        # Fit by least squares
         beta = np.linalg.lstsq(Xb, yb, rcond=None)[0]
         beta1 = beta[:p]
         beta2 = beta[p:]
-        # Calculate residuals and variance
         yhat1 = X1 @ beta1
         yhat2 = X2 @ beta2
         resid1 = y1 - yhat1
@@ -260,8 +255,6 @@ class Joint2Regressor:
         sigma2_2 = np.mean(resid2 ** 2)
         sigma2 = np.mean(np.concatenate([resid1, resid2]) ** 2)
         sigma2s = [sigma2_1, sigma2_2] if sigma_mode == 'two' else [sigma2, sigma2]
-    
-        # Variance (unconstrained OLS approx)
         Xb_nopenalty = np.block([
             [X1, np.zeros((n1, p))],
             [np.zeros((n2, p)), X2]
@@ -577,22 +570,16 @@ class Joint2Regressor:
         Returns:
         - DataFrame with coefficients for group 1 and group 2
         """
-        import pandas as pd
-        import numpy as np
-    
         vars_ = getattr(model, "variables_", {})
         beta1 = vars_.get("beta1", None)
         beta2 = vars_.get("beta2", None)
-    
         if (beta1 is None or beta2 is None) and "betas" in vars_:
             betas = vars_["betas"]
             if isinstance(betas, list) and len(betas) == 2:
-                beta1, beta2 = betas[0], betas[1]
-    
+                beta1, beta2 = betas[0], betas[1]    
         if beta1 is None or beta2 is None:
             print("Error: beta1 and beta2 not found in model.")
             return pd.DataFrame()
-    
         varnames = ['intercept'] + list(X_columns)
         df = pd.DataFrame({
             f"{model_name}_G1": np.round(beta1, 4),
