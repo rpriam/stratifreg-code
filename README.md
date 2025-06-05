@@ -1,30 +1,22 @@
 # <br>
 Computer code for "Family of linear regression mixture models stratified along the outcome" <br>
 
-# Structure
+## Main classes
 
-| File          | Class                 | Available Functions                                            |
-|---------------|-----------------------|----------------------------------------------------------------|
-| two_groups.py | Joint2Regressor       | fit_ols_groups, fit_ols_jointure, fit_ols_jointure_a_b, fit_ols_jointure_smoothed, solve_ols_constrained, solve_ols_constrained_het, assemble_block_matrix, build_constraint_vector, build_constraint_matrix, variance_constrained, variance_constrained_het, check_jointure_constraint, compare_models, predict |
-| k_groups.py   | JointKRegressor       | fit, check_jointure_constraint, compare_models, predict         |
-| gmm.py        | Joint2GMMRegressor    | fit, solve_constrained_regression, check_jointure_constraint, predict |
-| utils.py      | JointUtils            | add_intercept, solve_with_fallbacks, split_by_median, find_x0_LL, find_x0 |
+- `Joint2Regressor`: Piecewise regression with continuity constraints for two groups.
+- `JointKRegressor`: Stratified regression across K groups, with optional joint constraints and quantile support.
+- `Joint2GMMRegressor`: EM algorithm for piecewise Gaussian mixture regression with constraints.
+- `JointUtils`: Utilities for group splitting, median finding, etc.
 
-## Main Fit Methods (see options for lasso, ridge, and quantile when available)
+## Key Features
 
-| Class               | Method                    | Description                                           | #Groups  | # |
-|---------------------|--------------------------|-------------------------------------------------------|-----------|--------------|
-| Joint2Regressor     | fit_ols_groups           | Fits separate OLS models to two groups of data. | 2 | 1+1 |
-| Joint2Regressor     | fit_ols_jointure         | Fits OLS with a continuity constraint at the joint. | 2 | 1+1 |
-| Joint2Regressor     | fit_ols_jointure_a_b     | Fits OLS enforcing joint-point continuity. | 2 | 1+1 |
-| Joint2Regressor     | fit_ols_jointure_smoothed| Fits OLS with a soft (penalized) continuity at joint. | 2 | 1+1 |
-| JointKRegressor     | fit                      | Fits stratified regression across K groups with continuities. | K | K x 1 |
-| Joint2GMMRegressor  | fit                      | Fits Gaussian Mixture regression for two groups.      | 2  | m1+m2 |
+- Joint multi-group regression with continuity or custom constraints at the join point.
+- Supports quantile regression, penalized regression (lasso, ridge, elasticnet), and stratified GMM.
+- Tools for piecewise or regime regression models, not directly available in scikit-learn or statsmodels.
 
-Notebook: <br>
+## Notebook: <br>
 
-
-Datasets:
+## Datasets:
 
 |     | Name | n | p | X | y |
 | --- | --- | --- | --- | --- | --- |
