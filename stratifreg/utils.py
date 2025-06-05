@@ -46,6 +46,8 @@ class JointUtils:
             Data converted to ndarray: 2D if X was a DataFrame, 1D if X was a Series.
         """
         X = copy.deepcopy(X)
+        if hasattr(X, "to_numpy"):
+            return X.to_numpy()
         if isinstance(X, np.ndarray):
             if X.ndim == 2 and X.shape[1] == 1:
                 return X[:, 0]
@@ -65,7 +67,34 @@ class JointUtils:
                 f"[_as_numpy] type not supported : {type(X)}. "
                 "Expected DataFrame, Series or ndarray."
             )
-       
+
+    @staticmethod
+    def _as_numpy_groups(groups, reset_index=True):
+        converted = []
+        n_features = None
+        for idx, (X_i, y_i) in enumerate(groups):
+            if X_i is None or y_i is None:
+                raise ValueError(f"Group {idx}: X or y is None")
+            X_np = JointUtils._as_numpy(X_i, reset_index=reset_index)
+            y_np = JointUtils._as_numpy(y_i, reset_index=reset_index)
+            if X_np.ndim == 1:
+                X_np = X_np.reshape(-1, 1)
+            if y_np.ndim != 1:
+                y_np = y_np.reshape(-1)    
+            if X_np.shape[0] != y_np.shape[0]:
+                raise ValueError(
+                    f"Group {idx}: X has {X_np.shape[0]} rows but y has length {y_np.shape[0]}"
+                )
+            if n_features is None:
+                n_features = X_np.shape[1]
+            elif X_np.shape[1] != n_features:
+                raise ValueError(
+                    f"Group {idx}: X has {X_np.shape[1]} columns; expected {n_features} columns as in previous group(s)"
+                )
+            converted.append((X_np, y_np))
+        
+        return converted
+    
     @staticmethod
     def add_intercept(X):
         """

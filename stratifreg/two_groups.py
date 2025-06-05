@@ -6,7 +6,7 @@ Stratified regression for two groups, with or without joint/continuity constrain
 Implements OLS, joint OLS, and utilities for model comparison and diagnostics.
 
 Main class:
-    - Joint2Regressor: Fit and analyze piecewise regression with or without continuity at the join point.
+    - Joint2Regressor: Fit and analyze two multiple regressions with or without continuity at the join point.
 
 License: MIT
 """
@@ -55,12 +55,7 @@ class Joint2Regressor:
         sigma2s : list of float
             Residual variances per group.
         """
-        X1 = JointUtils._as_numpy(X1)
-        X2 = JointUtils._as_numpy(X2)
-        y1 = JointUtils._as_numpy(y1).ravel()
-        y2 = JointUtils._as_numpy(y2).ravel()
-        assert X1.shape[0] == y1.shape[0], "fit_ols_groups: X1 number of rows and y1 length must be equal"
-        assert X2.shape[0] == y2.shape[0], "fit_ols_groups: X2 number of rows and y2 length must be equal"
+        (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])
         n1, n2 = X1.shape[0], X2.shape[0]
         Xb = self.assemble_block_matrix(X1, X2)
         yb = np.concatenate([y1, y2])
@@ -121,12 +116,7 @@ class Joint2Regressor:
         d : ndarray
             Right-hand side vector used.
         """
-        X1 = JointUtils._as_numpy(X1)
-        X2 = JointUtils._as_numpy(X2)
-        y1 = JointUtils._as_numpy(y1).ravel()
-        y2 = JointUtils._as_numpy(y2).ravel()
-        assert X1.shape[0] == y1.shape[0], "fit_ols_jointure: X1 number of rows and y1 length must be equal"
-        assert X2.shape[0] == y2.shape[0], "fit_ols_jointure: X2 number of rows and y2 length must be equal"        
+        (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])        
         n1, n2 = X1.shape[0], X2.shape[0]
         Xb = self.assemble_block_matrix(X1, X2)
         yb = np.concatenate([y1, y2])
@@ -185,12 +175,7 @@ class Joint2Regressor:
         -------
         see fit_ols_jointure
         """
-        X1 = JointUtils._as_numpy(X1)
-        X2 = JointUtils._as_numpy(X2)
-        y1 = JointUtils._as_numpy(y1).ravel()
-        y2 = JointUtils._as_numpy(y2).ravel()        
-        assert X1.shape[0] == y1.shape[0], "fit_ols_jointure_a_b: X1 number of rows and y1 length must be equal"
-        assert X2.shape[0] == y2.shape[0], "fit_ols_jointure_a_b: X2 number of rows and y2 length must be equal"
+        (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])
         p = X1.shape[1]
         if cas == 'a':
             C = self.build_constraint_vector(x0, p)
@@ -232,10 +217,9 @@ class Joint2Regressor:
         sigma2s : list
             Residual variances per group.
         """
-        X1 = JointUtils._as_numpy(X1)
-        X2 = JointUtils._as_numpy(X2)
-        y1 = JointUtils._as_numpy(y1).ravel()
-        y2 = JointUtils._as_numpy(y2).ravel()
+        if lc < 0:
+            raise ValueError("Penalty parameter lc must be >= 0")
+        (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])
         p = X1.shape[1]
         n1, n2 = X1.shape[0], X2.shape[0]
         Xb = np.block([
@@ -288,7 +272,6 @@ class Joint2Regressor:
         beta_c : ndarray
             Coefficients estimated under constraint.
         """
-
         if d is None:
             d = np.zeros(C.shape[0])
         XtX = Xb.T @ Xb
@@ -323,7 +306,6 @@ class Joint2Regressor:
         beta_c : ndarray
             Estimated coefficients under constraint with heteroscedasticity.
         """
-
         if d is None:
             d = np.zeros(C.shape[0])
         Sigma_inv = np.linalg.inv(Sigma)
@@ -353,12 +335,11 @@ class Joint2Regressor:
         Xb : ndarray
             Combined block matrix of shape (n1 + n2, 2*p).
         """
-
         n1, p = X1.shape
         n2, _ = X2.shape
         return np.block([[X1, np.zeros((n1, p))],
                         [np.zeros((n2, p)), X2]])
-
+    
     def build_constraint_vector(self, x0, p):
         """
         Builds a constraint vector enforcing continuity at a join point between two groups.
@@ -375,7 +356,6 @@ class Joint2Regressor:
         v : ndarray
             Constraint vector of shape (1, 2*p).
         """
-
         v = np.kron([1, -1], x0)
         return v.reshape(1, -1)
 
@@ -395,7 +375,6 @@ class Joint2Regressor:
         C : ndarray
             Constraint matrix (shape depends on context).
         """
-
         c1 = np.hstack([x0, np.zeros_like(x0)])
         c2 = np.hstack([np.zeros_like(x0), x0])
         return np.vstack([c1, c2])

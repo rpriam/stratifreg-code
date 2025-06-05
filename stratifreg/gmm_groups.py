@@ -1,12 +1,12 @@
 """
 gmm_groups.py
-======
+============
 
 Gaussian Mixture regression for two groups with possible joint constraints at the cut point.
 Implements EM-based mixture of linear regressions with continuity constraint.
 
 Main class:
-    - Joint2GMMRegressor: Fit and analyze constrained GMM regression for two groups.
+    - Joint2GMMRegressor: Fit and analyze constrained GMM multiple regression for two groups.
 
 License: MIT
 """
@@ -30,8 +30,9 @@ class Joint2GMMRegressor:
         """
         pass
 
-    def fit(self, X1, X2, y1, y2, x0, m1, m2, max_iter=100, tol=1e-5,method_pen="ridge",
-                  l2=0.01,l1=0.01,eps=1e-8, use_post=False, verbose=False              ):
+    def fit(self, X1, X2, y1, y2, x0, m1, m2, max_iter=100, tol=1e-5,
+            method_pen='ridge',l1=0.00,l2=0.01,eps=1e-8,use_post=False,
+            verbose=False):
         """
         Fits a constrained Gaussian Mixture of linear regressions on two groups.
     
@@ -55,16 +56,19 @@ class Joint2GMMRegressor:
             Maximum number of EM iterations.
         tol : float, optional
             Convergence tolerance.
-        method_pen : {'ridge', 'lasso'}, 
-            Type of regularization penalty to use: 'ridge' (L2) or 'lasso' (L1).
-        l2 : float, optional
-            L2 regularization weight for ridge regression.
+        method_pen : {'ridge', 'elasticnet'}, non optional
+            Type of regularization penalty:
+            - 'ridge': L2 penalty only (`l2 > 0`, `l1 = 0`)
+            - 'elasticnet': L1 + L2 penalty (ridge + lasso, `l2 > 0` and `l1 > 0`)
         l1 : float, optional
-            L1 regularization weight for lasso regression.
+            L1 regularization weight for penalty in lasso.
+        l2 : float, optional
+            L2 regularization weight for penalty in ridge.
         eps : float, optional
             Numerical stabilization term.
         use_post : bool, optional
-            If True, uses posterior weights in the joint constraint.
+            If True, the joint constraint uses the posterior probabilities for each group. 
+            If False, it uses the mixture proportions `pi_k` as the weights instead.
         verbose : bool, optional
             If True, enables debug output.
     
@@ -77,12 +81,7 @@ class Joint2GMMRegressor:
         sigma2_2 : ndarray
             Estimated variances for group 2.
         """
-        X1 = JointUtils._as_numpy(X1)
-        X2 = JointUtils._as_numpy(X2)
-        y1 = JointUtils._as_numpy(y1).ravel()
-        y2 = JointUtils._as_numpy(y2).ravel()        
-        assert X1.shape[0] == y1.shape[0], "fit: X1 number of rows and y1 length must be equal"
-        assert X2.shape[0] == y2.shape[0], "fit: X2 number of rows and y2 length must be equal"
+        (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])
         if x0 is not None:
             x0 = JointUtils._as_numpy(x0).ravel()
             assert X1.shape[1] == x0.shape[0], "fit: X1,X2 number of cols and x0 length must be equal"
@@ -270,19 +269,27 @@ class Joint2GMMRegressor:
             Target vector.
         c : ndarray of shape or None
             Coefficient vector for the equality constraint. Pass None for no constraint.
-        method_pen : {'ridge', 'lasso'}, 
-            Type of regularization penalty to use: 'ridge' (L2) or 'lasso' (L1).
+        method_pen : {'ridge', 'elasticnet'}, 
+            Type of regularization penalty to use: 'ridge' (L2) or 'elasticnet=ridge+lasso' (L1+L2).
+            To ensure more numerical stability and invertibility, parameter l2 or l1 strictly positive.
         l1 : float, default=0.0
-            Weight for L1 regularization when method='lasso'.
+            Weight for L1 regularization when method='elasticnet'.
         l2 : float, default=0.0
-            Additional L2 penalty weight when method='ridge'.
+            Additional L2 penalty weight when method='ridge and/or elasticnet'.
         Returns
         -------
         beta : ndarray of shape (n_features,)
             Coefficient vector that solves the constrained regression problem.
         """
+        if method_pen not in {"ridge", "elasticnet"}:
+            raise ValueError(f"method_pen must be either 'ridge' or 'elasticnet', got {method_pen!r}")
         beta = None
         if method_pen == 'ridge':
+            if l2 <= 0:
+                raise ValueError("For 'ridge', l2 must be > 0")
+            if l1 != 0:
+                raise ValueError("For 'ridge', l1 must be 0")
+            
             A = Z.T @ Z + l2 * np.eye(Z.shape[1])
             b = Z.T @ y
             if c is None:
@@ -292,7 +299,10 @@ class Joint2GMMRegressor:
                 rhs = np.concatenate([b, [0]])
                 sol = np.linalg.solve(KKT, rhs)
                 beta = sol[:-1]
-        elif method_pen == 'lasso':
+        elif method_pen == 'elasticnet':
+            if l2 <= 0 or l1 <= 0:
+                raise ValueError("For 'elasticnet', both l1 and l2 must be > 0")
+            
             beta_var = cp.Variable(Z.shape[1])
             obj = 0.5 * cp.sum_squares(Z @ beta_var - y)
             if l1 > 0:
@@ -307,7 +317,7 @@ class Joint2GMMRegressor:
         else:
             raise ValueError("Method not recognized : choose 'ridge' or 'lasso'.")
         return beta
-
+    
     def check_jointure_constraint(self, beta_mat, x0, m1, post1=None, post2=None, pi1=None, pi2=None, tol=1e-6):
         """
         Checks if the joint constraint is satisfied between group components at x0.
