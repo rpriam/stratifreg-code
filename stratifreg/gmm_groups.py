@@ -76,9 +76,9 @@ class Joint2GMMRegressor:
         -------
         beta_mat : list of ndarray
             Estimated regression coefficients for each component and group.
-        sigma2_1 : ndarray
+        sigma2_1 : float
             Estimated variances for group 1.
-        sigma2_2 : ndarray
+        sigma2_2 : float
             Estimated variances for group 2.
         """
         (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])
@@ -317,40 +317,6 @@ class Joint2GMMRegressor:
         else:
             raise ValueError("Method not recognized : choose 'ridge' or 'lasso'.")
         return beta
-    
-    def check_jointure_constraint(self, beta_mat, x0, m1, post1=None, post2=None, pi1=None, pi2=None, tol=1e-6):
-        """
-        Checks if the joint constraint is satisfied between group components at x0.
-    
-        Parameters
-        ----------
-        beta_mat : ndarray
-            Coefficient matrix (shape: m1 + m2, p).
-        x0 : ndarray
-            Join point (features).
-        m1 : int
-            Number of components in group 1.
-        m2 : int
-            Number of components in group 2.
-        tol : float, optional
-            Tolerance for continuity at the join.
-    
-        Returns
-        -------
-        is_satisfied : bool
-            True if all constraints are satisfied within tolerance.
-        """
-
-        if post1 is not None and post2 is not None:
-            weights1, weights2 = post1, post2
-        elif pi1 is not None and pi2 is not None:
-            weights1, weights2 = pi1, pi2
-        else:
-            return None, False
-        pred1 = sum(weights1[k] * x0 @ beta_mat[k] for k in range(m1))
-        pred2 = sum(weights2[k] * x0 @ beta_mat[m1 + k] for k in range(len(weights2)))
-        diff = abs(pred1 - pred2)
-        return diff, diff < tol
 
     def predict(self, X_new, group=1):
         """
@@ -379,6 +345,52 @@ class Joint2GMMRegressor:
         if group == 1: return y_pred1
         if group == 2: return y_pred2
         return y_pred1, y_pred2
+
+    @staticmethod
+    def check_jointure_constraint(beta_mat, x0, m1, post1=None, post2=None, 
+                                  pi1=None, pi2=None, tol=1e-6, verbose=True):
+        """
+        Checks if the joint constraint is satisfied between group components at x0.
+    
+        Parameters
+        ----------
+        beta_mat : ndarray
+            Coefficient matrix (shape: m1 + m2, p).
+        x0 : ndarray
+            Join point (features).
+        m1 : int
+            Number of components in group 1.
+        m2 : int
+            Number of components in group 2.
+        tol : float, optional
+            Tolerance for continuity at the join.
+        verbose : True or False for print or assert
+        
+        Returns
+        -------
+        diff : float
+            Absolute difference between the two group predictions at the join point.
+        is_satisfied : bool
+            True if the constraint is satisfied (difference < tol).
+        """
+
+        if post1 is not None and post2 is not None:
+            weights1, weights2 = post1, post2
+        elif pi1 is not None and pi2 is not None:
+            weights1, weights2 = pi1, pi2
+        else:
+            return None, False
+        pred1 = sum(weights1[k] * x0 @ beta_mat[k] for k in range(m1))
+        pred2 = sum(weights2[k] * x0 @ beta_mat[m1 + k] for k in range(len(weights2)))
+        
+        if verbose==True:
+            print(f"Joint: left={left:.6f}, right={right:.6f}, diff={abs(left-right):.2e}", end=" ")
+            print(f" (constraint {'OK' if abs(left - right) < tolerance else 'Failed'})"," (",name_model,")")
+        else:
+            assert np.abs(left - right) < tolerance, (
+             f"Constraint failed at joint: |{left:.6f} - {right:.6f}| = {abs(left - right):.2e} > tol={tol}")
+
+        return abs(pred1 - pred2), abs(pred1 - pred2) < tol
 
     @staticmethod
     def display(model, X_columns, model_name="model"):

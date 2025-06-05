@@ -3,7 +3,7 @@ utils.py
 ========
 
 Utility functions for stratified regression: group splitting, constraint vector building,
-robust median selection, and robust convex optimization helpers.
+robust median selection, and robust convex optimization utilities.
 
 Main class:
     - JointUtils: Static methods for group splitting, constraint construction, and more.
@@ -70,17 +70,30 @@ class JointUtils:
 
     @staticmethod
     def _as_numpy_groups(groups, reset_index=True):
+        """
+        Convert a list of (X, y) group pairs into lists of numpy arrays, ensuring shape consistency.
+        
+        Parameters
+        ----------
+        groups : list of tuples
+            Each tuple is (Xg, yg) with X and y as DataFrame, Series, or ndarray.
+            With g for Group g
+        Returns
+        -------
+        converted : list of tuples
+            Each tuple is (X_np, y_np), both as numpy arrays.
+        """        
         converted = []
         n_features = None
-        for idx, (X_i, y_i) in enumerate(groups):
-            if X_i is None or y_i is None:
+        for idx, (Xg, yg) in enumerate(groups):
+            if Xg is None or yg is None:
                 raise ValueError(f"Group {idx}: X or y is None")
-            X_np = JointUtils._as_numpy(X_i, reset_index=reset_index)
-            y_np = JointUtils._as_numpy(y_i, reset_index=reset_index)
+            X_np = JointUtils._as_numpy(Xg, reset_index=reset_index)
+            y_np = JointUtils._as_numpy(yg, reset_index=reset_index)
             if X_np.ndim == 1:
                 X_np = X_np.reshape(-1, 1)
             if y_np.ndim != 1:
-                y_np = y_np.reshape(-1)    
+                y_np = y_np.ravel()   
             if X_np.shape[0] != y_np.shape[0]:
                 raise ValueError(
                     f"Group {idx}: X has {X_np.shape[0]} rows but y has length {y_np.shape[0]}"
@@ -176,9 +189,9 @@ class JointUtils:
         raise RuntimeError(f"No solver succeeded. Last error : {last_exception}")
 
     @staticmethod
-    def split_by_median(X, y, group_mode='median'):
+    def split_at_y0(X, y, y0=None):
         """
-        Splits X and y into two groups based on the median (or a custom cut) of y.
+        Splits X and y into two groups based on the median of y.
     
         Parameters
         ----------
@@ -186,40 +199,42 @@ class JointUtils:
             Feature matrix.
         y : pandas.DataFrame or pandas.Series
             Target variable.
-        group_mode : str, optional
-            Split mode: 'median' (default) or 'cut' for manual value.
+        y0 : float or None
+        Threshold for splitting y. If None, uses median(y).
     
         Returns
         -------
-        X1 : pandas.DataFrame
+        X1 : pandas.DataFrame or numpy.Ndarray
             Features for group 1 (y <= median).
-        X2 : pandas.DataFrame
+        X2 : pandas.DataFrame or numpy.Ndarray
             Features for group 2 (y > median).
-        y1 : pandas.Series
+        y1 : pandas.Series or numpy.Ndarray
             Target values for group 1.
-        y2 : pandas.Series
+        y2 : pandas.Series or numpy.ndarray
             Target values for group 2.
         """
-        X_np = JointUtils._as_numpy(X)
         y_np = JointUtils._as_numpy(y)
-        if group_mode == 'median':
-            median = np.median(y_np)
-            mask1 = y_np <= median
-            mask2 = y_np > median
-            X1 = X_np[mask1]
-            X2 = X_np[mask2]
-            y1 = y_np[mask1]
-            y2 = y_np[mask2]
+        if y0 is None:
+            y0 = np.median(y_np)
+        if not (np.min(y_np) < y0 < np.max(y_np)):
+            raise ValueError("ycut must be between min(y) and max(y)")
+        mask = y_np <= y0
+        if isinstance(X, pd.DataFrame):
+            X1 = X.loc[mask].copy().reset_index(drop=True)
+            X2 = X.loc[~mask].copy().reset_index(drop=True)            
         else:
-            n = len(X_np) // 2
-            X1 = X_np[:n,]
-            X2 = X_np[n:]
-            y1 = y_np[:n]
-            y2 = y_np[n:]
+            X1 = X[mask]
+            X2 = X[~mask]
+        if isinstance(y, pd.Series):
+            y1 = y.loc[mask].copy().reset_index(drop=True)
+            y2 = y.loc[~mask].copy().reset_index(drop=True)
+        else:
+            y1 = y[mask]
+            y2 = y[~mask]
         return X1, X2, y1, y2
     
     @staticmethod
-    def find_x0_LL(X, y, y_cut=None, L=5):
+    def find_x0_LL(X, y, y0=None, L=5):
         """
         Selects the median point among the 2*L observations closest to y_cut.
     
@@ -229,7 +244,7 @@ class JointUtils:
             Explanatory variables.
         y : pandas.DataFrame, pandas.Series, or ndarray
             Target variable.
-        y_cut : float, optional
+        y0 : float, optional
             Cut value (default: median of y).
         L : int, optional
             Number of points to select on each side of the cut (default: 5).
@@ -242,9 +257,9 @@ class JointUtils:
         X_np = JointUtils._as_numpy(X)
         y_np = JointUtils._as_numpy(y)        
         X_np = np.atleast_2d(X_np)
-        if y_cut is None:
-            y_cut = np.median(y_np)
-        distances = np.abs(y_np - y_cut)
+        if y0 is None:
+            y0 = np.median(y_np)
+        distances = np.abs(y_np - y0)
         idx = np.argsort(distances)[:2*L]
         X_near = X_np[idx]
         if X_near.ndim == 1:
@@ -276,3 +291,36 @@ class JointUtils:
         if y0 is None: y0 = np.median(y_np)
         i0 = np.argmin(np.abs(y_np - y0))
         return X_np[i0]
+
+    @staticmethod
+    def check_jointure_constraint(betas, joint_X_list, name_model=" ",tol=1e-5,verbose=True):
+        """
+        Checks the continuity of predictions at join points between groups.
+    
+        Parameters
+        ----------
+        betas : list of ndarray
+            Estimated coefficients for each group.
+        joint_X_list : list of ndarray
+            Join points (typically shared between adjacent groups).
+        name_model : str, optional
+            Name of the model. Defaut value:" "
+        tol : float, optional
+            Tolerance for continuity (default: 1e-6).
+        verbose : True or False for print or assert
+        
+        Returns
+        -------
+        """
+        for i in range(len(betas)-1):
+            xij = joint_X_list[i]
+            left = np.dot(xij, betas[i])
+            right = np.dot(xij, betas[i+1])
+            if verbose:
+                print(f"Joint {i+1}: left={left:.6f}, right={right:.6f}, diff={abs(left-right):.2e}", end=" ")
+                print(f" (constraint {'OK' if abs(left - right) < tol else 'Failed'})"," (",name_model,")")
+            else:
+                assert np.abs(left - right) < tol, (
+                   f"Constraint failed at joint {i}: |{left:.6f} - {right:.6f}| = {abs(left - right):.2e} > tol={tol}"
+        )
+    
