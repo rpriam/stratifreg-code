@@ -12,9 +12,7 @@
 
 - Joint multi-group regression with continuity or custom constraints at the join point.
 - Supports quantile regression, penalized regression (lasso, ridge, elasticnet), and stratified GMM.
-- Tools for piecewise or regime regression models, not directly available in scikit-learn or statsmodels.
-
-## Notebook: <br>
+- Stratified multivariate piecewise regression, not directly available in scikit-learn or statsmodels.
 
 ## Datasets:
 
