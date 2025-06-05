@@ -1,5 +1,5 @@
 # <br>
-Computer code for "Family of linear regression mixture models stratified along the outcome" <br>
+Computer code for <u>Family of linear regression mixture models stratified along the outcome</u> <br>
 
 ## Main classes
 
