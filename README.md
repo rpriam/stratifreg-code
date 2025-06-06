@@ -1,5 +1,6 @@
 # <br>
-# **<u>Family of linear regression mixture models stratified along the outcome</u>** <br>
+# **<u>Family of linear regression mixture models</u>** <br>
+# **<u>stratified along the outcome</u>** <br>
 
 ## Main classes
 
