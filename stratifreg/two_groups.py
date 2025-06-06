@@ -57,10 +57,10 @@ class Joint2Regressor:
         XtX_inv = np.linalg.inv(X.T @ X)
         var_beta = sigma2 * XtX_inv
     
-        loglik = -0.5 * n * np.log(2 * np.pi) - 0.5 * n * np.log(max(sigma2, 1e-8)) \
-                - 0.5 * np.sum(resid ** 2) / max(sigma2, 1e-8)
-        aic = -2 * loglik + 2 * (p + 1)
-        bic = -2 * loglik + (p + 1) * np.log(n)
+        lgk = -0.5 * n * np.log(2 * np.pi) - 0.5 * n * np.log(max(sigma2, 1e-8)) \
+              - 0.5 * np.sum(resid ** 2) / max(sigma2, 1e-8)
+        aic = -2 * lgk + 2 * (p + 1)
+        bic = -2 * lgk + (p + 1) * np.log(n)
         self.X_ = X
         self.y_ = y
         self.variables_ = {
@@ -69,7 +69,7 @@ class Joint2Regressor:
             'sigma2': sigma2,
             'var_beta': var_beta,
             'var_betas': [var_beta],
-            'loglik': loglik,
+            'lgk': lgk,
             'aic': aic,
             'bic': bic
         }
@@ -125,26 +125,26 @@ class Joint2Regressor:
         beta1 = beta[:X1.shape[1]]
         beta2 = beta[X1.shape[1]:]
         ##
-        loglik1 = -0.5 * n1 * np.log(2 * np.pi) - 0.5 * n1 * np.log(max(sigma2s[0], 1e-8)) - \
-                   0.5 * np.sum((y1 - X1 @ beta1)**2) / max(sigma2s[0], 1e-8)
-        loglik2 = -0.5 * n2 * np.log(2 * np.pi) - 0.5 * n2 * np.log(max(sigma2s[1], 1e-8)) - \
-                   0.5 * np.sum((y2 - X2 @ beta2)**2) / max(sigma2s[1], 1e-8)
+        lgk1 = -0.5 * n1 * np.log(2 * np.pi) - 0.5 * n1 * np.log(max(sigma2s[0], 1e-8)) - \
+                0.5 * np.sum((y1 - X1 @ beta1)**2) / max(sigma2s[0], 1e-8)
+        lgk2 = -0.5 * n2 * np.log(2 * np.pi) - 0.5 * n2 * np.log(max(sigma2s[1], 1e-8)) - \
+                0.5 * np.sum((y2 - X2 @ beta2)**2) / max(sigma2s[1], 1e-8)
         ##
         self.X1_     = X1
         self.X2_     = X2
         self.y1_     = y1
         self.y2_     = y2
-        self.loglik1_= loglik1
-        self.loglik2_= loglik2
-        self.aic1_   = -2 * loglik1 + 2 * (len(beta1)+1)
-        self.aic2_   = -2 * loglik2 + 2 * (len(beta2)+1)
-        self.bic1_   = -2 * loglik1 + (len(beta1)+1) * np.log(n1) #for two sigmas
-        self.bic2_   = -2 * loglik2 + (len(beta2)+1) * np.log(n2) #for two sigmas
+        self.lgk1_   = lgk1
+        self.lgk2_   = lgk2
+        self.aic1_   = -2 * lgk1 + 2 * (len(beta1)+1)
+        self.aic2_   = -2 * lgk2 + 2 * (len(beta2)+1)
+        self.bic1_   = -2 * lgk1 + (len(beta1)+1) * np.log(n1) #for two sigmas
+        self.bic2_   = -2 * lgk2 + (len(beta2)+1) * np.log(n2) #for two sigmas
         self.sigma_mode_ = sigma_mode
         self.var_beta_ =var_beta
         self.variables_ = {'beta1':beta1, 'beta2':beta2, 'betas':[beta1,beta2], 'sigma2s':sigma2s,
-                           'loglik1': self.loglik1_,'aic1': self.aic1_,'bic1': self.bic1_,
-                           'loglik2': self.loglik2_,'aic2': self.aic2_,'bic2': self.bic2_}
+                           'lgk1': self.lgk1_,'aic1': self.aic1_,'bic1': self.bic1_,
+                           'lgk2': self.lgk2_,'aic2': self.aic2_,'bic2': self.bic2_}
         return [beta1, beta2], sigma2s
 
     def fit_ols_jointure(self, X1, X2, y1, y2, C, d=None, sigma_mode='one'):
