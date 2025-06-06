@@ -316,7 +316,7 @@ class Joint2GMMRegressor:
                 prob = JointUtils.solve_with_fallbacks(obj, None)
             beta = beta_var.value
         else:
-            raise ValueError("Method not recognized : choose 'ridge' or 'lasso'.")
+            raise ValueError("Method not recognized : choose 'ridge' or 'elasticnet'.")
         return beta
 
     def predict(self, X_new, group=None):
@@ -339,8 +339,7 @@ class Joint2GMMRegressor:
         m1  = self.m1_
         pi1 = self.pi1_
         pi2 = self.pi2_
-        assert X_new.ndim == 2 and X_new.shape[1] == betas.shape[1], "predict: X_new must have same number of columns as beta1"
-        assert X_new.ndim == 2 and X_new.shape[1] == betas.shape[1], "predict: X_new must have same number of columns as beta2"   
+        assert X_new.ndim == 2 and X_new.shape[1] == betas.shape[1], "predict: X_new must have same number of columns as betas"
         y_pred1 = X_new @ (pi1 @ betas[:m1])
         y_pred2 = X_new @ (pi2 @ betas[m1:])
         if group == 1: return y_pred1
@@ -348,24 +347,19 @@ class Joint2GMMRegressor:
         return y_pred1, y_pred2
 
     @staticmethod
-    def check_jointure_constraint(beta_mat, x0, m1, post1=None, post2=None, 
-                                  pi1=None, pi2=None, tol=1e-6, verbose=True):
+    def check_jointure_constraint(model, x0, tol=1e-6, verbose=True, use_post=False):
         """
         Checks if the joint constraint is satisfied between group components at x0.
     
         Parameters
         ----------
-        beta_mat : ndarray
-            Coefficient matrix (shape: m1 + m2, p).
+        model : a fitted Joint2GMMRegressor instance
         x0 : ndarray
             Join point (features).
-        m1 : int
-            Number of components in group 1.
-        m2 : int
-            Number of components in group 2.
         tol : float, optional
             Tolerance for continuity at the join.
         verbose : True or False for print or assert
+        use_post : True for posterior, False for pik
         
         Returns
         -------
@@ -374,25 +368,28 @@ class Joint2GMMRegressor:
         is_satisfied : bool
             True if the constraint is satisfied (difference < tol).
         """
-
-        if post1 is not None and post2 is not None:
-            weights1, weights2 = post1, post2
-        elif pi1 is not None and pi2 is not None:
-            weights1, weights2 = pi1, pi2
+        vars_ = getattr(model, "variables_", {})
+        beta_mat = vars_["beta_mat"]
+        m1 = vars_["m1"]
+        m2 = vars_["m2"]
+        # Choose weights
+        if use_post and vars_.get("post1") is not None and vars_.get("post2") is not None:
+            weights1, weights2 = vars_["post1"], vars_["post2"]
         else:
-            return None, False
+            weights1, weights2 = vars_["pi1"], vars_["pi2"]
         pred1 = sum(weights1[k] * x0 @ beta_mat[k] for k in range(m1))
-        pred2 = sum(weights2[k] * x0 @ beta_mat[m1 + k] for k in range(len(weights2)))
-        
-        if verbose==True:
-            print(f"Joint: left={left:.6f}, right={right:.6f}, diff={abs(left-right):.2e}", end=" ")
-            print(f" (constraint {'OK' if abs(left - right) < tolerance else 'Failed'})"," (",name_model,")")
+        pred2 = sum(weights2[k] * x0 @ beta_mat[m1 + k] for k in range(m2))
+        diff = abs(pred1 - pred2)
+        if verbose:
+            print(f"Joint: left={pred1:.6f}, right={pred2:.6f}, diff={diff:.2e}", end=" ")
+            print(f"(constraint {'OK' if diff < tol else 'Failed'})")
         else:
-            assert np.abs(left - right) < tolerance, (
-             f"Constraint failed at joint: |{left:.6f} - {right:.6f}| = {abs(left - right):.2e} > tol={tol}")
+            assert diff < tol, (
+                f"Constraint failed at joint: |{pred1:.6f} - {pred2:.6f}| = {diff:.2e} > tol={tol}")
+        return diff, diff < tol
 
-        return abs(pred1 - pred2), abs(pred1 - pred2) < tol
 
+    
     @staticmethod
     def display(model, model_name="model"):
         """

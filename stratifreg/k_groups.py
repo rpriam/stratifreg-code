@@ -131,7 +131,6 @@ class JointKRegressor:
         y_pred : array, shape (n_samples,)
             The predicted target values for the specified group.
         """
-        
         X_new = JointUtils._as_numpy(X_new)
         vars_ = getattr(model, "variables_", {})
         betas = vars_.get("betas", None)
@@ -160,18 +159,15 @@ class JointKRegressor:
             raise ValueError("model.X_columns_ not found. Did you run fit before display?")
         if betas is None:
             raise ValueError("betas not found in model.variables_.")
-    
         p = len(X_columns)
         G = len(betas)
         # Vérification : chaque vecteur beta doit avoir la bonne longueur
         for i, beta in enumerate(betas, start=1):
             if len(beta) != p:
                 raise ValueError(f"Length of coefficients for group {i} ({len(beta)}) does not match number of variable names ({p}).")
-        
         data = {}
         for i, beta in enumerate(betas, start=1):
             colname = f"{model_name}_G{i}"
             data[colname] = np.round(beta, 4)
-    
         df = pd.DataFrame(data, index=list(X_columns))
         return df

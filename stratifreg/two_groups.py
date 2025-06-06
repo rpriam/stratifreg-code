@@ -11,12 +11,13 @@ Main class:
 License: MIT
 """
 
+from stratifreg.k_groups import JointKRegressor
+from stratifreg.utils import JointUtils
 from numpy.linalg import inv
 import pandas as pd
 import numpy as np
 import cvxpy as cp
 import warnings
-from stratifreg.utils import JointUtils
 
 class Joint2Regressor:
     def __init__(self):
@@ -551,7 +552,6 @@ class Joint2Regressor:
                 raise ValueError("group must be 1 or 2")
             return X_new @ beta
         elif "betas" in vars_:
-            from k_groups import JointKRegressor
             return JointKRegressor.predict(self, X_new, group=group)
         else:
             raise ValueError("No coefficients found in model. Did you fit the model?")
