@@ -1,5 +1,5 @@
 # <br>
-# **<u>Family of stratified linear regression mixture models</u>** <br>
+# **<u> Stratified linear regression mixture models </u>** <br>
 
 ## Main classes
 
