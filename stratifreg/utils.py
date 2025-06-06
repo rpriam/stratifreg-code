@@ -28,6 +28,43 @@ class JointUtils:
         """
         pass
 
+
+    @staticmethod
+    def check_and_get_common_X_columns(X_list, default_prefix="x"):
+        """
+        Check and retrieve common column names from a list of feature matrices.
+    
+        Parameters
+        ----------
+        X_list : list of array-like
+            List of feature matrices (each can be a pandas DataFrame or a numpy ndarray).
+        default_prefix : str, optional
+            Prefix for default column names if Xs have no attribute 'columns' (default: "x").
+    
+        Returns
+        -------
+        names : list of str
+            List of variable (column) names, either from the first DataFrame in X_list,
+            or generated as ["x1", ..., "xp"] if column names are not present.
+    
+        Raises
+        ------
+        ValueError
+            If the number of columns differ across Xs, or if column names do not match.
+        """
+        ncols = [x.shape[1] for x in X_list]
+        if len(set(ncols)) != 1:
+            raise ValueError(f"All X matrices must have the same number of columns. Got: {ncols}")
+        # Try to get columns names if possible
+        if all(hasattr(x, "columns") for x in X_list):
+            names = [list(x.columns) for x in X_list]
+            if any(n != names[0] for n in names):
+                raise ValueError(f"All X matrices must have the same column names. Got: {names}")
+            return names[0]
+        else:
+            # Fallback to generic names
+            return [f"{default_prefix}{i+1}" for i in range(ncols[0])]
+
     @staticmethod
     def _as_numpy(X, reset_index=True):
         """

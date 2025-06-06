@@ -81,6 +81,7 @@ class Joint2GMMRegressor:
         sigma2_2 : float
             Estimated variances for group 2.
         """
+        self.X_columns_ = JointUtils.check_and_get_common_X_columns([X1, X2])
         (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])
         if x0 is not None:
             x0 = JointUtils._as_numpy(x0).ravel()
@@ -318,7 +319,7 @@ class Joint2GMMRegressor:
             raise ValueError("Method not recognized : choose 'ridge' or 'lasso'.")
         return beta
 
-    def predict(self, X_new, group=1):
+    def predict(self, X_new, group=None):
         """
         Predicts target values for new observations using the fitted Gaussian Mixture of regressors.
     
@@ -393,14 +394,13 @@ class Joint2GMMRegressor:
         return abs(pred1 - pred2), abs(pred1 - pred2) < tol
 
     @staticmethod
-    def display(model, X_columns, model_name="model"):
+    def display(model, model_name="model"):
         """
         Summarize component-wise coefficients from a Joint2GMMRegressor model.
         Displays variables as rows and one column per GMM component.
     
         Parameters:
         - model : a fitted Joint2GMMRegressor instance
-        - X_columns : list of variable names (excluding intercept)
         - model_name : optional label prefix for columns
     
         Returns:
@@ -408,23 +408,19 @@ class Joint2GMMRegressor:
         """    
         vars_ = getattr(model, "variables_", {})
         beta_mat = vars_.get("beta_mat", None)
+        X_columns = getattr(model, "X_columns_", None)        
+        varnames = list(X_columns)
         m1 = vars_.get("m1", None)
         m2 = vars_.get("m2", None)
-    
         if beta_mat is None or m1 is None or m2 is None:
             print("Error: 'beta_mat', 'm1', or 'm2' missing in model.variables_.")
-            return pd.DataFrame()
-    
-        varnames = ['intercept'] + list(X_columns)
+            return pd.DataFrame()        
         data = {}
-    
         for i in range(m1):
             label = f"{model_name}_G1_C{i+1}"
             data[label] = np.round(beta_mat[i], 4)
-    
         for i in range(m2):
             label = f"{model_name}_G2_C{i+1}"
             data[label] = np.round(beta_mat[m1 + i], 4)
-    
         df = pd.DataFrame(data, index=varnames)
         return df

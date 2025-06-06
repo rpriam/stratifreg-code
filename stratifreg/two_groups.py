@@ -28,7 +28,53 @@ class Joint2Regressor:
         """
         pass
 
+    def fit_ols_single(self, X, y):
+        """
+        Fit OLS for a single group and store variable names if present.
+    
+        Parameters
+        ----------
+        X : DataFrame or ndarray, shape (n, p)
+        y : Series or ndarray, shape (n,)
+        
+        Returns
+        -------
+        betas : list of ndarray
+            List containing one array of estimated coefficients for the single group.
+        var_beta : ndarray
+            Estimated variance-covariance matrix of coefficients.
+        sigma2s : list of float
+            List containing residual variance for the single group.
+        """
 
+        self.X_columns_ = JointUtils.check_and_get_common_X_columns([X])
+        (X, y) = JointUtils._as_numpy_groups([(X, y)])[0]
+        n, p = X.shape    
+        beta = np.linalg.lstsq(X, y, rcond=None)[0]
+        yhat = X @ beta
+        resid = y - yhat
+        sigma2 = np.mean(resid ** 2)
+        XtX_inv = np.linalg.inv(X.T @ X)
+        var_beta = sigma2 * XtX_inv
+    
+        loglik = -0.5 * n * np.log(2 * np.pi) - 0.5 * n * np.log(max(sigma2, 1e-8)) \
+                - 0.5 * np.sum(resid ** 2) / max(sigma2, 1e-8)
+        aic = -2 * loglik + 2 * (p + 1)
+        bic = -2 * loglik + (p + 1) * np.log(n)
+        self.X_ = X
+        self.y_ = y
+        self.variables_ = {
+            'beta': beta,
+            'betas': [beta],
+            'sigma2': sigma2,
+            'var_beta': var_beta,
+            'var_betas': [var_beta],
+            'loglik': loglik,
+            'aic': aic,
+            'bic': bic
+        }
+        return [beta], var_beta, [sigma2]
+  
     def fit_ols_groups(self, X1, X2, y1, y2, sigma_mode='one'):
         """
         Fits separate OLS regressions on two groups and estimates coefficients and variances.
@@ -50,11 +96,10 @@ class Joint2Regressor:
         -------
         betas : list of ndarray
             Coefficients per group.
-        var_beta : ndarray
-            Estimated variance-covariance matrix.
         sigma2s : list of float
             Residual variances per group.
         """
+        self.X_columns_ = JointUtils.check_and_get_common_X_columns([X1, X2])
         (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])
         n1, n2 = X1.shape[0], X2.shape[0]
         Xb = self.assemble_block_matrix(X1, X2)
@@ -81,9 +126,9 @@ class Joint2Regressor:
         beta2 = beta[X1.shape[1]:]
         ##
         loglik1 = -0.5 * n1 * np.log(2 * np.pi) - 0.5 * n1 * np.log(max(sigma2s[0], 1e-8)) - \
-           0.5 * np.sum((y1 - X1 @ beta1)**2) / sigma2_1
+                   0.5 * np.sum((y1 - X1 @ beta1)**2) / max(sigma2s[0], 1e-8)
         loglik2 = -0.5 * n2 * np.log(2 * np.pi) - 0.5 * n2 * np.log(max(sigma2s[1], 1e-8)) - \
-           0.5 * np.sum((y2 - X2 @ beta2)**2) / sigma2_2
+                   0.5 * np.sum((y2 - X2 @ beta2)**2) / max(sigma2s[1], 1e-8)
         ##
         self.X1_     = X1
         self.X2_     = X2
@@ -96,9 +141,11 @@ class Joint2Regressor:
         self.bic1_   = -2 * loglik1 + (len(beta1)+1) * np.log(n1) #for two sigmas
         self.bic2_   = -2 * loglik2 + (len(beta2)+1) * np.log(n2) #for two sigmas
         self.sigma_mode_ = sigma_mode
-        self.variables_ = {'beta1':beta1, 'beta2':beta2,
-                           'sigma2s':sigma2s,'var_beta':var_beta}
-        return [beta1, beta2], var_beta, sigma2s
+        self.var_beta_ =var_beta
+        self.variables_ = {'beta1':beta1, 'beta2':beta2, 'betas':[beta1,beta2], 'sigma2s':sigma2s,
+                           'loglik1': self.loglik1_,'aic1': self.aic1_,'bic1': self.bic1_,
+                           'loglik2': self.loglik2_,'aic2': self.aic2_,'bic2': self.bic2_}
+        return [beta1, beta2], sigma2s
 
     def fit_ols_jointure(self, X1, X2, y1, y2, C, d=None, sigma_mode='one'):
         """
@@ -125,8 +172,6 @@ class Joint2Regressor:
         -------
         betas_c : list of ndarray
             Constrained coefficients per group.
-        var_beta_c : ndarray
-            An approximated estimated variance-covariance matrix.
         sigma2s : list of float
             Residual variances.
         C : ndarray
@@ -134,6 +179,7 @@ class Joint2Regressor:
         d : ndarray
             Right-hand side vector used.
         """
+        self.X_columns_ = JointUtils.check_and_get_common_X_columns([X1, X2])
         (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])        
         n1, n2 = X1.shape[0], X2.shape[0]
         Xb = self.assemble_block_matrix(X1, X2)
@@ -162,9 +208,12 @@ class Joint2Regressor:
         p = X1.shape[1]
         beta1_c = beta_c[:p]
         beta2_c = beta_c[p:]
+        self.X1_=X1
+        self.X2_=X2
+        self.var_beta_c_ = var_beta_c
         self.variables_ = {'beta1':beta1_c, 'beta2':beta2_c, 
-                           'sigma2s':sigma2s, 'var_beta_c': var_beta_c}
-        return [beta1_c, beta2_c], var_beta_c, sigma2s, C, d
+                           'betas':[beta1_c,beta2_c], 'sigma2s':sigma2s}
+        return [beta1_c, beta2_c], sigma2s, C, d
     
     def fit_ols_jointure_a_b(self, X1, X2, y1, y2, x0, y0=None, sigma_mode='one', cas='a'):
         """
@@ -194,6 +243,7 @@ class Joint2Regressor:
         -------
         see fit_ols_jointure
         """
+        self.X_columns_ = JointUtils.check_and_get_common_X_columns([X1, X2])
         (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])
         p = X1.shape[1]
         if cas == 'a':
@@ -236,6 +286,7 @@ class Joint2Regressor:
         sigma2s : list
             Residual variances per group.
         """
+        self.X_columns_ = JointUtils.check_and_get_common_X_columns([X1, X2])
         if lc < 0:
             raise ValueError("Penalty parameter lc must be >= 0")
         (X1, y1), (X2, y2) = JointUtils._as_numpy_groups([(X1, y1), (X2, y2)])
@@ -264,7 +315,7 @@ class Joint2Regressor:
         self.X2_=X2
         self.y2_=y2
         self.lc_=lc
-        self.variables_ = {'beta1':beta1, 'beta2':beta2, 'sigma2s':sigma2s}
+        self.variables_ = {'beta1':beta1, 'beta2':beta2, 'betas':[beta1,beta2], 'sigma2s':sigma2s}
         return [beta1, beta2], sigma2s
     
     def solve_ols_constrained(self, Xb, yb, C, d=None):
@@ -462,61 +513,45 @@ class Joint2Regressor:
         middle = CV @ C.T
         Vc = V - CV.T @ inv(middle) @ CV
         return Vc
-    
-    def predict(self, X_new, group=1):
+
+    @staticmethod
+    def predict(model,X_new, group=None):
         """
-        Predicts target values for new observations using the fitted group models.
-        For each group, returns the prediction for X_new using the corresponding estimated coefficients.
+        Predict target values for new data X using the fitted two-group regression model.
     
         Parameters
         ----------
-        X_new : ndarray or DataFrame
-            New data points to predict.
+        model: object of class JointKRegressor or Joint2Regressor after fit
+        X : array-like, shape (n_samples, n_features)
+            The data matrix for which to predict target values.
+            The features should match those used in fitting.
+        group : int, optional
+            The group index to use for prediction.
+            - If the model was fitted with a single group, this argument is ignored.
+            - If the model was fitted with two groups, must specify group=1 (for group 1) or group=2 (for group 2).
+            - If not provided and the model has two groups, a ValueError is raised.
     
         Returns
         -------
-        y_preds : ndarray or tuple of ndarray
-            Predicted values. If group=1 or 2, returns 1D array; else returns (y_pred1, y_pred2).
-
+        y_pred : array, shape (n_samples,)
+            Predicted target values for the specified group.
         """
+        
         X_new = JointUtils._as_numpy(X_new)
-        beta1 = self.variables_['beta1']
-        beta2 = self.variables_['beta2']
-        y_pred1 = X_new @ beta1
-        y_pred2 = X_new @ beta2
-        if group==1: return y_pred1
-        if group==2: return y_pred2
-        return y_pred1, y_pred2
-
-    @staticmethod
-    def display(model, X_columns, model_name="model"):
-        """
-        Summarize beta1 and beta2 (or 'betas') from a Joint2Regressor model.
-        Displays variable names as rows and group indices as columns
-        Works for both constrained and unconstrained fits.
-    
-        Parameters:
-        - model : fitted Joint2Regressor instance
-        - X_columns : list of variable names (excluding intercept)
-        - model_name : prefix for output columns
-    
-        Returns:
-        - DataFrame with coefficients for group 1 and group 2
-        """
         vars_ = getattr(model, "variables_", {})
-        beta1 = vars_.get("beta1", None)
-        beta2 = vars_.get("beta2", None)
-        if (beta1 is None or beta2 is None) and "betas" in vars_:
-            betas = vars_["betas"]
-            if isinstance(betas, list) and len(betas) == 2:
-                beta1, beta2 = betas[0], betas[1]    
-        if beta1 is None or beta2 is None:
-            print("Error: beta1 and beta2 not found in model.")
-            return pd.DataFrame()
-        varnames = ['intercept'] + list(X_columns)
-        df = pd.DataFrame({
-            f"{model_name}_G1": np.round(beta1, 4),
-            f"{model_name}_G2": np.round(beta2, 4)
-        }, index=varnames)
-    
-        return df
+        if "beta" in vars_:
+            beta = vars_["beta"]
+            return X_new @ beta
+        elif "beta1" in vars_ and "beta2" in vars_:
+            if group == 1:
+                beta = vars_["beta1"]
+            elif group == 2:
+                beta = vars_["beta2"]
+            else:
+                raise ValueError("group must be 1 or 2")
+            return X_new @ beta
+        elif "betas" in vars_:
+            from k_groups import JointKRegressor
+            return JointKRegressor.predict(self, X_new, group=group)
+        else:
+            raise ValueError("No coefficients found in model. Did you fit the model?")

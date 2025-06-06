@@ -61,6 +61,7 @@ class JointKRegressor:
             raise ValueError(f"tau must be in (0, 1) for quantile regression, got {tau}")
         if l1 < 0 or l2 < 0:
             raise ValueError("Penalty parameters l1 and l2 must be >= 0")
+        self.X_columns_ = JointUtils.check_and_get_common_X_columns([Xg for Xg, yg in groups])
         groups_np = JointUtils._as_numpy_groups(groups)
         G = len(groups)
         p = groups[0][0].shape[1]
@@ -109,53 +110,68 @@ class JointKRegressor:
         self.variables_ = {'betas': betas_value}
         return betas_value
 
-    def predict(self, X_new):
+    @staticmethod
+    def predict(model, X_new, group=None):
         """
-        Predicts outputs for each group model.
-    
-        For each observation in X_new, returns the prediction of all K group regressors.
+        Predict target values for given data X, for the specified group.
     
         Parameters
         ----------
-        X_new : ndarray or DataFrame
-            Input features, shape (n_samples, n_features).
+        model: object of class JointKRegressor or Joint2Regressor after fit
+        X_new : array-like, shape (n_samples, n_features)
+            The data matrix to predict on. Must match the columns used in fit.
+        group : int, optional
+            The group index for which to predict.
+            - For single-group models (K=1), group is ignored.
+            - For multi-group models (K > 1), you **must** specify group (1-based index).
+              If not provided and K > 1, a ValueError is raised.
     
         Returns
         -------
-        y_preds : ndarray
-            Matrix of predicted values, shape (n_samples, K), where each column k contains the predictions for group k.
+        y_pred : array, shape (n_samples,)
+            The predicted target values for the specified group.
         """
-
-        X_new = X_new.values if hasattr(X_new, "values") else X_new
-        betas = self.variables_["betas"]
-        return np.column_stack([X_new @ beta for beta in betas])
-
-    @staticmethod
-    def display(model, X_columns, model_name="model"):
-        """
-        Summarize group coefficients from a JointKRegressor model.
-        Displays variable names as rows and group indices as columns.
-    
-        Parameters:
-        - model : a fitted JointKRegressor instance
-        - X_columns : list of variable names (excluding intercept)
-        - model_name : optional label prefix for columns
-    
-        Returns:
-        - pandas DataFrame with one column per group
-        """
+        
+        X_new = JointUtils._as_numpy(X_new)
         vars_ = getattr(model, "variables_", {})
         betas = vars_.get("betas", None)
-        if not isinstance(betas, list) or not betas:
-            print("Error: 'betas' list not found in model.variables_.")
-            return pd.DataFrame()
+        if betas is None:
+            raise ValueError("No 'betas' found in model.variables_.")
+        K = len(betas)
+        if group is None:
+            if K == 1:
+                return X_new @ betas[0]
+            else:
+                raise ValueError(f"Multiple groups present (K={K}). Please specify 'group' (1 to {K}).")
+        if not (1 <= group <= K):
+            raise ValueError(f"Group must be in 1..{K}")
+        return X_new @ betas[group-1]
     
-        varnames = ['intercept'] + list(X_columns)
+    @staticmethod
+    def display(model, model_name="model"):
+        """
+        Display group coefficients from a JointKRegressor model, for any number of groups.
+        Uses model.X_columns_ for variable names.
+        """   
+        vars_ = getattr(model, "variables_", {})
+        betas = vars_.get("betas", None)
+        X_columns = getattr(model, "X_columns_", None)
+        if X_columns is None:
+            raise ValueError("model.X_columns_ not found. Did you run fit before display?")
+        if betas is None:
+            raise ValueError("betas not found in model.variables_.")
+    
+        p = len(X_columns)
+        G = len(betas)
+        # Vérification : chaque vecteur beta doit avoir la bonne longueur
+        for i, beta in enumerate(betas, start=1):
+            if len(beta) != p:
+                raise ValueError(f"Length of coefficients for group {i} ({len(beta)}) does not match number of variable names ({p}).")
+        
         data = {}
-    
         for i, beta in enumerate(betas, start=1):
             colname = f"{model_name}_G{i}"
             data[colname] = np.round(beta, 4)
     
-        df = pd.DataFrame(data, index=varnames)
+        df = pd.DataFrame(data, index=list(X_columns))
         return df
