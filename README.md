@@ -3,10 +3,10 @@
 
 ## Main classes
 
-- `Joint2Regressor`: Stratified regression with continuity constraints for two groups.
+- `Joint2Regressor`: Stratified multiple regression with continuity constraints for two (or K) groups.
 - `JointKRegressor`: Piecewise regression across K groups, with joint constraints, lasso and quantile.
 - `Joint2GMMRegressor`: EM algorithm for piecewise Gaussian mixture regression with constraints.
-- `JointUtils`: Utilities for group splitting, median finding, etc.
+- `JointUtils`: Utilities for group splitting, closest point to median finding, etc.
 
 ## Key Features
 
