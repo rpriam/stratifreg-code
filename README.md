@@ -20,6 +20,17 @@ intercept may be removed (centering $y_\ell$). The code development had involved
 tools, for code refactoring into classes, writing of the docstring, and help for code cleaning and <br>
 debugging, robustfying the data entry types, etc.
 
+## Installation
+
+pip install stratifreg
+
+## Usage
+
+import stratifreg
+# or
+from stratifreg import two_groups
+
+
 ## Datasets:
 
 |     | Name | n | p | X | y |
