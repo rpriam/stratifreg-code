@@ -25,4 +25,4 @@ D4 | pisa-2009       | 5233  | 20  | [.csv](https://github.com/rpriam/stratifreg
 D5 | housing         | 20640 | 8   | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/Xf_all_california_housing.csv) | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/yf_all_california_housing.csv) |
 
 Note : This package is provided “as is” for reproducing results, even if not all features are fully implemented or tested. <br>
-For the moment the lasso and ridge includes the $beta_0$, hence the eventual intercept may be removed by centering $y_\ell$.
+For the moment the lasso and ridge includes the $beta_0$, hence the eventual intercept may be removed (centering $y_\ell$).
