@@ -22,13 +22,13 @@ debugging, robustfying the data entry types, etc.
 
 ## Installation
 
-pip install stratifreg
+`pip install stratifreg`
 
 ## Usage
 
-import stratifreg
-# or
-from stratifreg import two_groups
+`import stratifreg`
+
+`from stratifreg import two_groups`
 
 
 ## Datasets:
