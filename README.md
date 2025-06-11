@@ -15,7 +15,7 @@
 - Stratified multivariate piecewise regression, not directly available in scikit-learn or statsmodels.
 
 Note : This package is provided “as is” for reproducing results, even if not all features are fully <br> 
-implemented or tested. For the moment the lasso and ridge includes the $beta_0$, hence the eventual <br> 
+implemented or tested. For the moment the lasso and ridge includes the $\beta_0$, hence the eventual <br> 
 intercept may be removed (centering $y_\ell$). The code development had involved the use of modern <br> 
 tools, for code refactoring into classes, writing of the docstring, and help for code cleaning and <br>
 debugging, robustfying the data entry types, etc.
