@@ -31,7 +31,7 @@ Perspectives: smoother multi-points at each joint, optimal $x_o$, statistical te
 
 `import stratifreg`
 
-`from stratifreg import two_groups`
+`from stratifreg.two_groups import Joint2Regressor`
 
 
 ## Datasets:
