@@ -20,6 +20,8 @@ intercept may be removed (centering $y_\ell$). The code development had involved
 tools, for code refactoring into classes, writing of the docstring, and help for code cleaning and <br>
 debugging, robustfying the data entry types, etc.
 
+To add: Multi-points at each joint, optimal xo, smoother models, statistical tests.
+
 ## Installation
 
 `pip install stratifreg`
