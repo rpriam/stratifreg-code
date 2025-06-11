@@ -23,10 +23,6 @@ debugging, robustfying the data entry types, etc.
 Perspectives: smoother multi-points at each joint, optimal $x_o$, statistical tests, variance, selections.
 
 
-## Installation
-
-`pip install stratifreg`
-
 ## Usage
 
 `import stratifreg`
