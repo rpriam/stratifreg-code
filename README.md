@@ -42,5 +42,5 @@ D5 | housing         | 20640 | 8   | [.csv](https://github.com/rpriam/stratifreg
 
 ## References
 
-- Priam, R. (2025). Family of linear regression mixture models stratified along the outcome. open archive: [hal-04179813v3](https://hal.science/hal-04179813v3)
+- Priam, R. (2025). Family of linear regression mixture models stratified along the outcome. [hal-04179813v3](https://hal.science/hal-04179813v3)
 
