@@ -19,14 +19,6 @@ implemented or tested. For the moment the lasso and ridge includes the $\beta_0$
 intercept may be removed (centering $y_\ell$). The code development had involved the use of modern <br> 
 tools, for code refactoring into classes, docstring writing, code cleaning, debugging.
 
-## To de added as soon as possible: 
-- smoother multi-points at joints
-- optimal computation for $x_o$
-- statistical tests and variance
-- model and variable selection
-- full numpy implementation
-
-
 ## Usage
 
 `import stratifreg`
@@ -43,6 +35,13 @@ D2 | pre-diabet      | 3059  | 4   | [.csv](https://github.com/rpriam/stratifreg
 D3 | life-expectancy | 2928  | 16  | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/Xf_all_lifeexpectancy.csv) | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/yf_all_lifeexpectancy.csv) |
 D4 | pisa-2009       | 5233  | 20  | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/Xf_all_pisa2009.csv) | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/yf_all_pisa2009.csv) |
 D5 | housing         | 20640 | 8   | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/Xf_all_california_housing.csv) | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/yf_all_california_housing.csv) |
+
+## To de added as soon as possible: 
+- smoother multi-points at joints
+- optimal computation for $x_o$
+- statistical tests and variance
+- model and variable selection
+- full numpy implementation
 
 ## References
 
