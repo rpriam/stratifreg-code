@@ -20,8 +20,8 @@ intercept may be removed (centering $y_\ell$). The code development had involved
 tools, for code refactoring into classes, docstring writing, code cleaning, debugging.
 
 ## To de added as soon as possible: 
-- smoother multi-points at each joint
-- optimal computation for the $x_o$
+- smoother multi-points at joints
+- optimal computation for $x_o$
 - statistical tests and variance
 - model and variable selection
 - full numpy implementation
