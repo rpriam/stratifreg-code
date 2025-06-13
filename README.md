@@ -26,7 +26,7 @@ tools, for code refactoring into classes, docstring writing, code cleaning, debu
 `from stratifreg.two_groups import Joint2Regressor`
 
 
-## Datasets:
+## Datasets
 
 |     | Name | n | p | X | y |
 | --- | --- | --- | --- | --- | --- |
@@ -36,7 +36,7 @@ D3 | life-expectancy | 2928  | 16  | [.csv](https://github.com/rpriam/stratifreg
 D4 | pisa-2009       | 5233  | 20  | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/Xf_all_pisa2009.csv) | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/yf_all_pisa2009.csv) |
 D5 | housing         | 20640 | 8   | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/Xf_all_california_housing.csv) | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/yf_all_california_housing.csv) |
 
-## To de added next: 
+## To de added next 
 - Smoother multi-points at joints
 - Optimal computation for $x_o$
 - Statistical tests and variance
