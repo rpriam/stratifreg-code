@@ -17,10 +17,9 @@
 Note : This package is provided “as is” for reproducing results, even if not all features are fully <br> 
 implemented or tested. For the moment the lasso and ridge includes the $\beta_0$, hence the eventual <br> 
 intercept may be removed (centering $y_\ell$). The code development had involved the use of modern <br> 
-tools, for code refactoring into classes, writing of the docstring, and help for code cleaning and <br>
-debugging, robustfying the data entry types, etc.
+tools, for code refactoring into classes, docstring writing, code cleaning, debugging.
 
-Perspectives: smoother multi-points at each joint, optimal $x_o$, statistical tests, variance, selections.
+To add: smoother multi-points at each joint, optimal $x_o$, statistical tests, variance, selections.
 
 
 ## Usage
