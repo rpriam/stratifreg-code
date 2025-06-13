@@ -36,11 +36,11 @@ D3 | life-expectancy | 2928  | 16  | [.csv](https://github.com/rpriam/stratifreg
 D4 | pisa-2009       | 5233  | 20  | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/Xf_all_pisa2009.csv) | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/yf_all_pisa2009.csv) |
 D5 | housing         | 20640 | 8   | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/Xf_all_california_housing.csv) | [.csv](https://github.com/rpriam/stratifreg-code/blob/main/datasets/yf_all_california_housing.csv) |
 
-## To de added as soon as possible: 
-- smoother multi-points at joints
-- optimal computation for $x_o$
-- statistical tests and variance
-- model and variable selection
+## To de added next: 
+- Smoother multi-points at joints
+- Optimal computation for $x_o$
+- Statistical tests and variance
+- Model and variable selection
 - full numpy implementation
 
 ## References
