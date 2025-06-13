@@ -19,7 +19,12 @@ implemented or tested. For the moment the lasso and ridge includes the $\beta_0$
 intercept may be removed (centering $y_\ell$). The code development had involved the use of modern <br> 
 tools, for code refactoring into classes, docstring writing, code cleaning, debugging.
 
-To add: smoother multi-points at each joint, optimal $x_o$, statistical tests, variance, selections.
+## To de added as soon as possible: 
+- smoother multi-points at each joint
+- optimal computation for the $x_o$
+- statistical tests and variance
+- model and variable selection
+- full numpy implementation
 
 
 ## Usage
