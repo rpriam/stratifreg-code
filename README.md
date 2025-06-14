@@ -40,7 +40,7 @@ D5 | housing         | 20640 | 8   | [.csv](https://github.com/rpriam/stratifreg
 
 ## To be added next 
 - Smoother multi-points at joints
-- Optimal computation for $x_o$
+- Optimal computation for the $x_o$
 - Statistical tests and variance
 - Model and variable selection
 - Full numpy implementation
