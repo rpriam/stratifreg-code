@@ -25,7 +25,7 @@ tools, for code refactoring into classes, docstring writing, code cleaning, debu
 
 `import stratifreg`
 
-`from stratifreg.two_groups import Joint2Regressor`
+`from stratifreg import Joint2Regressor`
 
 
 ## Datasets
