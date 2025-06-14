@@ -21,6 +21,8 @@ tools, for code refactoring into classes, docstring writing, code cleaning, debu
 
 ## Usage
 
+`pip install stratifreg`
+
 `import stratifreg`
 
 `from stratifreg.two_groups import Joint2Regressor`
